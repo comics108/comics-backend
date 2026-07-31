@@ -1,6 +1,6 @@
-# Bhagavad-Gita Backend
+# Comics Backend
 
-Backend API for Bhagavad-Gita mobile applications (v2012).
+Backend API for Comics mobile applications (v2012).
 
 ## Requirements
 

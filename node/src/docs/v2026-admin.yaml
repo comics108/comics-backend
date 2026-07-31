@@ -1,0 +1,1167 @@
+openapi: 3.0.3
+info:
+  title: Comics Admin API v2026
+  description: |
+    Admin API for managing Comics content (seasons, episodes, puzzles, music, quotes).
+
+    All responses follow the format:
+    ```json
+    {
+      "success": true,
+      "data": { ... },
+      "pagination": { "page": 1, "limit": 20, "total": 100 }
+    }
+    ```
+
+    Error responses:
+    ```json
+    {
+      "success": false,
+      "error": "Error message",
+      "data": null
+    }
+    ```
+
+    Localized content (name, text) is returned as:
+    ```json
+    {
+      "name": {
+        "en": "English text",
+        "ru": "Русский текст",
+        "hi": "हिंदी टेक्स्ट"
+      }
+    }
+    ```
+  version: "2026"
+
+servers:
+  - url: /api/v2026/admin
+    description: Admin API
+
+tags:
+  - name: Auth
+    description: Authentication
+  - name: Seasons
+    description: Season (book) management
+  - name: Episodes
+    description: Episode management
+  - name: Puzzles
+    description: Puzzle management
+  - name: Pieces
+    description: Puzzle piece management
+  - name: Quotes
+    description: Quote management with scheduled publishing
+  - name: Music
+    description: Music track management
+  - name: Devices
+    description: Device statistics
+  - name: Notifications
+    description: Push notifications
+  - name: Files
+    description: File uploads
+
+paths:
+  # ============ AUTH ============
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============ SEASONS ============
+  /seasons:
+    get:
+      tags: [Seasons]
+      summary: List all seasons
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of seasons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeasonsResponse'
+    post:
+      tags: [Seasons]
+      summary: Create season
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeasonInput'
+      responses:
+        '200':
+          description: Season created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeasonResponse'
+
+  /seasons/reorder:
+    put:
+      tags: [Seasons]
+      summary: Reorder seasons
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+      responses:
+        '200':
+          description: Seasons reordered
+
+  /seasons/{id}:
+    get:
+      tags: [Seasons]
+      summary: Get season by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Season details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeasonResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Seasons]
+      summary: Update season
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeasonInput'
+      responses:
+        '200':
+          description: Season updated
+    delete:
+      tags: [Seasons]
+      summary: Delete season (cascades to episodes)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Season and episodes deleted
+
+  # ============ EPISODES ============
+  /episodes:
+    get:
+      tags: [Episodes]
+      summary: List episodes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: seasonId
+          in: query
+          schema:
+            type: integer
+          description: Filter by season
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: List of episodes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EpisodesResponse'
+    post:
+      tags: [Episodes]
+      summary: Create episode
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EpisodeInput'
+      responses:
+        '200':
+          description: Episode created
+
+  /episodes/reorder:
+    put:
+      tags: [Episodes]
+      summary: Reorder episodes within season
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [seasonId, order]
+              properties:
+                seasonId:
+                  type: integer
+                order:
+                  type: array
+                  items:
+                    type: integer
+                  description: Episode IDs in new order
+      responses:
+        '200':
+          description: Episodes reordered
+
+  /episodes/{id}:
+    get:
+      tags: [Episodes]
+      summary: Get episode by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Episode details
+    put:
+      tags: [Episodes]
+      summary: Update episode
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EpisodeInput'
+      responses:
+        '200':
+          description: Episode updated
+    delete:
+      tags: [Episodes]
+      summary: Delete episode
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Episode deleted
+
+  # ============ PUZZLES ============
+  /puzzles:
+    get:
+      tags: [Puzzles]
+      summary: List all puzzles
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of puzzles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PuzzlesResponse'
+    post:
+      tags: [Puzzles]
+      summary: Create puzzle
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PuzzleInput'
+      responses:
+        '200':
+          description: Puzzle created
+
+  /puzzles/reorder:
+    put:
+      tags: [Puzzles]
+      summary: Reorder puzzles
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+      responses:
+        '200':
+          description: Puzzles reordered
+
+  /puzzles/{id}:
+    get:
+      tags: [Puzzles]
+      summary: Get puzzle by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Puzzle details with pieces
+    put:
+      tags: [Puzzles]
+      summary: Update puzzle
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PuzzleInput'
+      responses:
+        '200':
+          description: Puzzle updated
+    delete:
+      tags: [Puzzles]
+      summary: Delete puzzle (cascades to pieces)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Puzzle and pieces deleted
+
+  # ============ PIECES ============
+  /pieces:
+    get:
+      tags: [Pieces]
+      summary: List pieces for a puzzle
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: puzzleId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of pieces
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PiecesResponse'
+    post:
+      tags: [Pieces]
+      summary: Create piece
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PieceInput'
+      responses:
+        '200':
+          description: Piece created
+
+  /pieces/reorder:
+    put:
+      tags: [Pieces]
+      summary: Reorder pieces within puzzle
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [puzzleId, order]
+              properties:
+                puzzleId:
+                  type: integer
+                order:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '200':
+          description: Pieces reordered
+
+  /pieces/{id}:
+    get:
+      tags: [Pieces]
+      summary: Get piece by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Piece details
+    put:
+      tags: [Pieces]
+      summary: Update piece
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PieceInput'
+      responses:
+        '200':
+          description: Piece updated
+    delete:
+      tags: [Pieces]
+      summary: Delete piece
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Piece deleted
+
+  # ============ QUOTES ============
+  /quotes:
+    get:
+      tags: [Quotes]
+      summary: List quotes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [all, scheduled, published]
+            default: all
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: List of quotes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuotesResponse'
+    post:
+      tags: [Quotes]
+      summary: Create quote
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteInput'
+      responses:
+        '200':
+          description: Quote created
+
+  /quotes/{id}:
+    get:
+      tags: [Quotes]
+      summary: Get quote by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Quote details
+    put:
+      tags: [Quotes]
+      summary: Update quote
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteInput'
+      responses:
+        '200':
+          description: Quote updated
+    delete:
+      tags: [Quotes]
+      summary: Delete quote
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Quote deleted
+
+  /quotes/{id}/publish:
+    put:
+      tags: [Quotes]
+      summary: Publish quote now
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Quote published
+
+  # ============ MUSIC ============
+  /music:
+    get:
+      tags: [Music]
+      summary: List all music tracks
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of music tracks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MusicListResponse'
+    post:
+      tags: [Music]
+      summary: Create music track
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MusicInput'
+      responses:
+        '200':
+          description: Music track created
+
+  /music/reorder:
+    put:
+      tags: [Music]
+      summary: Reorder music tracks
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+      responses:
+        '200':
+          description: Music tracks reordered
+
+  /music/{id}:
+    get:
+      tags: [Music]
+      summary: Get music track by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Music track details
+    put:
+      tags: [Music]
+      summary: Update music track
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MusicInput'
+      responses:
+        '200':
+          description: Music track updated
+    delete:
+      tags: [Music]
+      summary: Delete music track
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Music track deleted
+
+  # ============ DEVICES & NOTIFICATIONS ============
+  /devices:
+    get:
+      tags: [Devices]
+      summary: List devices
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: platform
+          in: query
+          schema:
+            type: string
+            enum: [ios, android, windows]
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: List of devices
+
+  /devices/stats:
+    get:
+      tags: [Devices]
+      summary: Device statistics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Device stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceStats'
+
+  /notifications/send:
+    post:
+      tags: [Notifications]
+      summary: Send push notification
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationInput'
+      responses:
+        '200':
+          description: Notification sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResult'
+
+  # ============ FILES ============
+  /files/upload:
+    post:
+      tags: [Files]
+      summary: Upload file (image, audio, cbz)
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                folder:
+                  type: string
+                  default: uploads
+                  description: Target folder (images, audio, episodes)
+      responses:
+        '201':
+          description: File uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUploadResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # ===== Common =====
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        data:
+          nullable: true
+
+    LocalizedText:
+      type: object
+      properties:
+        en:
+          type: string
+        ru:
+          type: string
+        hi:
+          type: string
+
+    ReorderInput:
+      type: object
+      required: [order]
+      properties:
+        order:
+          type: array
+          items:
+            type: integer
+          description: IDs in new order
+
+    # ===== Auth =====
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                email:
+                  type: string
+
+    # ===== Seasons =====
+    Season:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        image:
+          type: string
+          nullable: true
+        product:
+          type: string
+          nullable: true
+        order:
+          type: integer
+        episodesCount:
+          type: integer
+
+    SeasonInput:
+      type: object
+      properties:
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        image:
+          type: string
+        product:
+          type: string
+        order:
+          type: integer
+
+    SeasonsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Season'
+
+    SeasonResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Season'
+
+    # ===== Episodes =====
+    Episode:
+      type: object
+      properties:
+        id:
+          type: integer
+        seasonId:
+          type: integer
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        image:
+          type: string
+          nullable: true
+        file:
+          type: string
+          nullable: true
+        version:
+          type: integer
+        product:
+          type: string
+          nullable: true
+        date:
+          type: string
+          format: date
+        order:
+          type: integer
+
+    EpisodeInput:
+      type: object
+      properties:
+        seasonId:
+          type: integer
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        image:
+          type: string
+        file:
+          type: string
+        version:
+          type: integer
+        product:
+          type: string
+        date:
+          type: string
+          format: date
+        order:
+          type: integer
+
+    EpisodesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Episode'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ===== Puzzles =====
+    Puzzle:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        width:
+          type: integer
+        height:
+          type: integer
+        order:
+          type: integer
+        piecesCount:
+          type: integer
+
+    PuzzleInput:
+      type: object
+      properties:
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        width:
+          type: integer
+        height:
+          type: integer
+        order:
+          type: integer
+
+    PuzzlesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Puzzle'
+
+    # ===== Pieces =====
+    Piece:
+      type: object
+      properties:
+        id:
+          type: integer
+        puzzleId:
+          type: integer
+        x:
+          type: integer
+        y:
+          type: integer
+        width:
+          type: integer
+        height:
+          type: integer
+        file:
+          type: string
+          nullable: true
+        version:
+          type: integer
+        date:
+          type: string
+          format: date
+        order:
+          type: integer
+
+    PieceInput:
+      type: object
+      properties:
+        puzzleId:
+          type: integer
+        x:
+          type: integer
+        y:
+          type: integer
+        width:
+          type: integer
+        height:
+          type: integer
+        file:
+          type: string
+        version:
+          type: integer
+        date:
+          type: string
+          format: date
+        order:
+          type: integer
+
+    PiecesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Piece'
+
+    # ===== Quotes =====
+    Quote:
+      type: object
+      properties:
+        id:
+          type: integer
+        text:
+          $ref: '#/components/schemas/LocalizedText'
+        image:
+          $ref: '#/components/schemas/LocalizedText'
+          description: Image URLs per language
+        publishDate:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [published, scheduled]
+
+    QuoteInput:
+      type: object
+      properties:
+        text:
+          $ref: '#/components/schemas/LocalizedText'
+        image:
+          $ref: '#/components/schemas/LocalizedText'
+          description: Image URLs per language
+        publishDate:
+          type: string
+          format: date-time
+
+    QuotesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Quote'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ===== Music =====
+    Music:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        author:
+          $ref: '#/components/schemas/LocalizedText'
+        file:
+          type: string
+          nullable: true
+        order:
+          type: integer
+
+    MusicInput:
+      type: object
+      properties:
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+        author:
+          $ref: '#/components/schemas/LocalizedText'
+        file:
+          type: string
+        order:
+          type: integer
+
+    MusicListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Music'
+
+    # ===== Devices =====
+    DeviceStats:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            total:
+              type: integer
+            active30days:
+              type: integer
+            byPlatform:
+              type: object
+              properties:
+                android:
+                  type: integer
+                ios:
+                  type: integer
+                windows:
+                  type: integer
+
+    # ===== Notifications =====
+    NotificationInput:
+      type: object
+      required: [title, body]
+      properties:
+        title:
+          $ref: '#/components/schemas/LocalizedText'
+        body:
+          $ref: '#/components/schemas/LocalizedText'
+        platform:
+          type: string
+          enum: [all, ios, android]
+          default: all
+
+    NotificationResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            sent:
+              type: integer
+            failed:
+              type: integer
+
+    # ===== Files =====
+    FileUploadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            url:
+              type: string
+            filename:
+              type: string
+
+    # ===== Pagination =====
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer

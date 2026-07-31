@@ -1,0 +1,27 @@
+{
+  "name": "bhagavadgita-backend",
+  "version": "1.0.0",
+  "description": "Bhagavad-Gita Backend API v2012",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "keywords": [
+    "bhagavadgita",
+    "api",
+    "backend"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
+    "multer": "^2.2.0",
+    "swagger-ui-express": "^5.0.1",
+    "ws": "^8.21.1",
+    "yamljs": "^0.3.0"
+  }
+}
